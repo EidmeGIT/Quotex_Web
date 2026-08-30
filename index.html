@@ -3450,8 +3450,8 @@ z"/>
 .svg-eye{height:14px; width:14px; color:white;}
 </style>
                                     </div>
-                                    <div class="user-email"><span style="cursor:text;">prefexofficial@ai.com</span></div>
-                                    <div class="user-id" ><span style="cursor:text;">ID: 47771005</span></div>
+                                    <div class="user-email"><span style="cursor:text;">prefex1@ai.com</span></div>
+                                    <div class="user-id" ><span style="cursor:text;">ID: 42266606</span></div>
                                     <div class="currency-row">
                                         <span class="currency-label"><span style="cursor:text;">Currency:</span></span>
                                         <span class="currency-value"><span style="cursor:text;">USD</span></span>
@@ -6258,6 +6258,38 @@ document.addEventListener("DOMContentLoaded", function() {
   })();
 
 
+		// --- TOGGLE SPECIFIC EMAIL & ID SCRIPT ---
+document.addEventListener("DOMContentLoaded", function () {
+    const changeBtn = document.querySelector(".change-btn");
+    const userEmailSpan = document.querySelector(".user-email span");
+    const userIdSpan = document.querySelector(".user-id span");
+
+    // Define your exact values
+    const originalEmail = "prefex1@ai.com";
+    const originalId = "ID: 42266606";
+
+    // Set your specific new email and ID here
+    const specificNewEmail = "prefex2@ai.com";
+    const specificNewId = "ID:  58058409";
+
+    if (changeBtn) {
+        changeBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (userEmailSpan && userIdSpan) {
+                // If it's already the new one, toggle back to original; otherwise switch to specific
+                if (userEmailSpan.textContent.trim() === specificNewEmail) {
+                    userEmailSpan.textContent = originalEmail;
+                    userIdSpan.textContent = originalId;
+                } else {
+                    userEmailSpan.textContent = specificNewEmail;
+                    userIdSpan.textContent = specificNewId;
+                }
+            }
+        });
+    }
+});
 
 
 
