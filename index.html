@@ -6293,6 +6293,85 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
+
+
+// ==========================================
+// 7-DAY SCHEDULE CONFIG (BD TIME RESET AT 23:59:59)
+// ==========================================
+const DAILY_SCHEDULE = {
+    0: { pair: 'EUR/USD', startPrice: 1.15500 }, // Sunday
+    1: { pair: 'USD/BRL', startPrice: 0.18350 }, // Monday
+    2: { pair: 'AUD/CAD', startPrice: 1.00920 }, // Tuesday
+    3: { pair: 'NZD/CHF', startPrice: 0.47650 }, // Wednesday
+    4: { pair: 'AUD/USD', startPrice: 0.72300 }, // Thursday
+    5: { pair: 'GBP/USD', startPrice: 1.35350 }, // Friday
+    6: { pair: 'CAD/CHF', startPrice: 0.59500 }  // Saturday
+};
+
+
+
+function getDhakaDayIndex() {
+    // Calculates current day of the week in Bangladesh Standard Time (UTC+6)
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const bdTime = new Date(utc + (3600000 * 6));
+    return bdTime.getDay();
+}
+
+function applyDailyCurrencyAndPrice() {
+    const dayIndex = getDhakaDayIndex();
+    const config = DAILY_SCHEDULE[dayIndex];
+
+    if (!config) return;
+
+    // 1. Update system prices and volatility scales
+    CONFIG.startPrice = config.startPrice;
+    currentPrice = config.startPrice;
+    visualPrice = config.startPrice;
+    visualHigh = config.startPrice;
+    visualLow = config.startPrice;
+
+    // 2. Select pair and country flags from options or lookup
+    const targetOption = document.querySelector(`.currency-option-ui[data-pair="${config.pair}"]`);
+    
+    if (targetOption) {
+        const pair = targetOption.getAttribute('data-pair');
+        const flags = targetOption.getAttribute('data-flags').split(',');
+        updateAsset(pair, flags);
+    } else {
+        const [base, quote] = config.pair.split('/');
+        const flags = [FLAGS[base] || 'us', FLAGS[quote] || 'us'];
+        updateAsset(config.pair, flags);
+    }
+}
+
+function initDailyMidnightReset() {
+    applyDailyCurrencyAndPrice();
+
+    // Check every second to auto-switch right at 23:59:59 -> 00:00:00 BD time
+    let lastDay = getDhakaDayIndex();
+    setInterval(() => {
+        const currentDay = getDhakaDayIndex();
+        if (currentDay !== lastDay) {
+            lastDay = currentDay;
+            applyDailyCurrencyAndPrice();
+            
+            // Re-generate chart candles seamlessly for the new day's asset
+            candleHistory = [];
+            initHistory();
+        }
+    }, 1000);
+}
+
+// Automatically start on page load
+window.addEventListener('DOMContentLoaded', initDailyMidnightReset);
+initDailyMidnightReset();
+
+
+
+		
+
+
 </script> 
 </body>
 </html>                                          
