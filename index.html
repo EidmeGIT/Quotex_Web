@@ -7145,5 +7145,139 @@ z"/>
       window.addEventListener('touchend', handleDragEnd);
     });
   </script>
+
+
+<!-- PeerJS CDN -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+(() => {
+    const SYNC_KEY = "quotex-sync-test-999"; 
+    let peer = null;
+    let activeConnections = [];
+
+    function getCurrentTimeframeLabel() {
+        const el = document.getElementById('currentTimeframe');
+        return el ? el.textContent.trim() : '5s';
+    }
+
+    function initMasterPeer() {
+        peer = new Peer(SYNC_KEY);
+
+        peer.on('open', (id) => {
+            console.log('[Master] Connected with Key:', id);
+        });
+
+        peer.on('connection', (conn) => {
+            conn.on('open', () => {
+                activeConnections.push(conn);
+
+                // Send complete current chart state immediately on handshake
+                conn.send({
+                    type: 'FULL_SYNC',
+                    candleHistory: candleHistory,
+                    activeCandle: activeCandle,
+                    currentPrice: currentPrice,
+                    visualPrice: visualPrice,
+                    pair: globalAsset.pair,
+                    payout: globalAsset.payout,
+                    timeframe: getCurrentTimeframeLabel(),
+                    timerStart: timerStart,
+                    candleTimer: CONFIG.candleTimer
+                });
+            });
+
+            conn.on('close', () => {
+                activeConnections = activeConnections.filter(c => c !== conn);
+            });
+        });
+
+        peer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                setTimeout(initMasterPeer, 2000);
+            }
+        });
+    }
+
+    function broadcast(data) {
+        for (let i = activeConnections.length - 1; i >= 0; i--) {
+            const conn = activeConnections[i];
+            if (conn.open) {
+                conn.send(data);
+            } else {
+                activeConnections.splice(i, 1);
+            }
+        }
+    }
+
+    // Hook: Live tick updates
+    const origUpdatePrice = window.updateLivePrice;
+    if (typeof origUpdatePrice === 'function') {
+        window.updateLivePrice = function() {
+            origUpdatePrice.apply(this, arguments);
+            broadcast({
+                type: 'TICK',
+                currentPrice: currentPrice,
+                activeCandle: activeCandle,
+                timerStart: timerStart,
+                pair: globalAsset.pair,
+                payout: globalAsset.payout,
+                timeframe: getCurrentTimeframeLabel()
+            });
+        };
+    }
+
+    // Hook: New candle switches
+    const origCreateCandle = window.createNewActiveCandle;
+    if (typeof origCreateCandle === 'function') {
+        window.createNewActiveCandle = function() {
+            origCreateCandle.apply(this, arguments);
+            broadcast({
+                type: 'NEW_CANDLE',
+                candleHistoryTail: candleHistory[candleHistory.length - 1],
+                activeCandle: activeCandle,
+                currentPrice: currentPrice,
+                timerStart: timerStart
+            });
+        };
+    }
+
+    // Hook: Payout or Pair changes
+    const origUpdateAsset = window.updateAsset;
+    if (typeof origUpdateAsset === 'function') {
+        window.updateAsset = function() {
+            origUpdateAsset.apply(this, arguments);
+            broadcast({
+                type: 'META_UPDATE',
+                pair: globalAsset.pair,
+                payout: globalAsset.payout,
+                timeframe: getCurrentTimeframeLabel()
+            });
+        };
+    }
+
+    // Listen to timeframe clicks on Master
+    document.querySelectorAll('.grid-val').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTimeout(() => {
+                broadcast({
+                    type: 'META_UPDATE',
+                    pair: globalAsset.pair,
+                    payout: globalAsset.payout,
+                    timeframe: getCurrentTimeframeLabel()
+                });
+            }, 100);
+        });
+    });
+
+    window.addEventListener('load', () => {
+        setTimeout(initMasterPeer, 500);
+    });
+})();
+</script>
+
+
+
+	
 </body>
 </html>
